@@ -28,9 +28,9 @@ macro_rules! sd_try {
     })
 }
 
-/// High-level interface to the systemd journal.
-///
-/// The main interface for writing to the journal is `fn log()`, and the main
-/// interface for reading the journal is `struct Journal`.
-mod journal;
-pub use self::journal::*;
+#[path="journal_reader.rs"]
+pub mod reader;
+
+#[path="journal_writer.rs"]
+pub mod writer;
+

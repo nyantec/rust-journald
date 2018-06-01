@@ -9,15 +9,15 @@ fn test_reverse_walk() {
 	];
 
 	for message in &messages_expected {
-		journald::send(&[&format!("MESSAGE={}", message)]);
+		journald::writer::send(&[&format!("MESSAGE={}", message)]);
 	}
 
-	let mut journal = journald::Journal
-			::open(journald::JournalFiles::All, false, false)
+	let mut journal = journald::reader::JournalReader
+			::open(journald::reader::JournalFiles::All, false, false)
 			.expect("journal open failed");
 
 	journal
-			.seek(journald::JournalSeek::Tail)
+			.seek(journald::reader::JournalSeek::Tail)
 			.expect("journal seek failed");
 
 	let mut messages_actual = Vec::<String>::new();
