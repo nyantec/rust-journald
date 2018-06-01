@@ -86,7 +86,6 @@ impl JournalReader {
 		unsafe { ffi::sd_journal_restart_data(self.j) }
 
 		let mut fields  = BTreeMap::new();
-
 		let mut sz: size_t = 0;
 		let data: *mut u8 = ptr::null_mut();
 		while sd_try!(ffi::sd_journal_enumerate_data(self.j, &data, &mut sz)) > 0 {
@@ -99,6 +98,29 @@ impl JournalReader {
 				fields.insert(From::from(name), From::from(value));
 			}
 		}
+
+		let mut timestamp_realtime_us: u64 = 0;
+		unsafe {
+			ffi::sd_journal_get_realtime_usec(
+					self.j,
+					&mut timestamp_realtime_us);
+		}
+
+		fields.insert(
+				"__REALTIME_TIMESTAMP".to_string(),
+				timestamp_realtime_us.to_string());
+
+		let mut timestamp_monotonic_us: u64 = 0;
+		unsafe {
+			ffi::sd_journal_get_monotonic_usec(
+					self.j,
+					&mut timestamp_monotonic_us,
+					ptr::null());
+		}
+
+		fields.insert(
+				"__MONOTONIC_TIMESTAMP".to_string(),
+				timestamp_monotonic_us.to_string());
 
 		let entry = JournalEntry::from_fields(&fields);
 

@@ -1,9 +1,17 @@
 extern crate journald;
 use journald::reader::*;
 use journald::JournalEntry;
+use std::time::{SystemTime, UNIX_EPOCH};
+
+const TIME_EPSILON_SECONDS : i64 = 5;
 
 #[test]
 fn test_reverse_walk() {
+	let now_usec : i64 = SystemTime::now()
+			.duration_since(UNIX_EPOCH)
+			.unwrap()
+			.as_secs() as i64;
+
 	let messages_expected = vec![
 		"rust-systemd test 1",
 		"rust-systemd test 2",
@@ -23,17 +31,21 @@ fn test_reverse_walk() {
 			.seek(JournalSeek::Tail)
 			.expect("journal seek failed");
 
-	let mut messages_actual = Vec::<String>::new();
-
-	for _ in 0..3 {
+	for i in 1..(messages_expected.len() + 1) {
 		let entry = journal
 				.previous_entry()
 				.expect("previous_record() failed")
 				.unwrap();
 
-		messages_actual.insert(0, entry.get_message().unwrap().to_string());
-	}
+		let entry_message = entry.get_message().unwrap().to_string();
+		assert!(entry_message == messages_expected[messages_expected.len() - i]);
 
-	assert!(messages_expected == messages_actual);
+		let entry_time = entry
+				.get_wallclock_time()
+				.unwrap()
+				.timestamp_us / 1000000;
+
+		assert!((entry_time - now_usec).abs() < TIME_EPSILON_SECONDS)
+	}
 }
 
