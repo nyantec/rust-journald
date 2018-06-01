@@ -1,5 +1,6 @@
 extern crate journald;
 use journald::reader::*;
+use journald::JournalEntry;
 
 #[test]
 fn test_reverse_walk() {
@@ -10,7 +11,9 @@ fn test_reverse_walk() {
 	];
 
 	for message in &messages_expected {
-		journald::writer::send_to_journald(&[&format!("MESSAGE={}", message)]);
+		let mut entry = JournalEntry::new();
+		entry.set_message(message);
+		journald::writer::submit(&entry).expect("journald write failed");
 	}
 
 	let mut journal = JournalReader::open(&JournalReaderConfig::default())
