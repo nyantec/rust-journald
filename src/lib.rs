@@ -32,4 +32,5 @@ macro_rules! sd_try {
 ///
 /// The main interface for writing to the journal is `fn log()`, and the main
 /// interface for reading the journal is `struct Journal`.
-pub mod journal;
+mod journal;
+pub use self::journal::*;

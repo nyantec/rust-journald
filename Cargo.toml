@@ -1,23 +1,16 @@
 [package]
-
-name = "systemd"
+name = "journald"
 version = "0.3.0"
-authors = ["Cody P Schafer <dev@codyps.com>"]
+authors = ["The rust-journald Authors <oss@nyantec.com>", "Cody P Schafer <dev@codyps.com>"]
 license = "LGPL-2.1+"
-description = "A rust interface to libsystemd provided APIs"
-repository = "https://github.com/jmesmon/rust-systemd"
-documentation = "https://docs.rs/systemd"
-include = ["Cargo.toml", "src/**/*.rs", "tests/**/*.rs", "README.md" ]
-
-[features]
-bus = ["libsystemd-sys/bus"]
+description = "A rust binding for the systemd journald api"
+repository = "https://github.com/nyantec/rust-journald"
+documentation = "https://docs.rs/journald"
 
 [dependencies]
 log = "~0.4"
 libc = "~0.2"
 utf8-cstr = "~0.1"
 cstr-argument = "~0.0"
+libsystemd-sys = "0.2"
 
-[dependencies.libsystemd-sys]
-path = "libsystemd-sys"
-version = "0.2"
