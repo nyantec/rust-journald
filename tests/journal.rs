@@ -1,9 +1,4 @@
-#[macro_use]
 extern crate systemd;
-#[macro_use]
-extern crate log;
-
-use std::path::Path;
 use systemd::journal;
 
 #[test]

@@ -1,17 +1,10 @@
-use libc::{c_char, c_int, size_t};
+use libc::{c_int, size_t};
 use log::{self, Log, Record, Level, SetLoggerError};
-use std::{io, ptr, result, fmt};
+use std::{ptr, result};
 use std::collections::BTreeMap;
-use std::ffi::CString;
-use std::io::ErrorKind::InvalidData;
-use std::os::raw::c_void;
-use std::u64;
 use ffi::array_to_iovecs;
-use ffi::id128::sd_id128_t;
 use ffi::journal as ffi;
-use id128::Id128;
-use super::{free_cstring, Result};
-use std::time;
+use super::Result;
 
 /// Send preformatted fields to systemd.
 ///
@@ -36,15 +29,6 @@ enum SyslogLevel {
 	// Notice = 5,
 	Info = 6,
 	Debug = 7,
-}
-
-/// Record a log entry, with custom priority and location.
-pub fn log(level: usize, file: &str, line: u32, module_path: &str, args: &fmt::Arguments) {
-	send(&[&format!("PRIORITY={}", level),
-		   &format!("MESSAGE={}", args),
-		   &format!("CODE_LINE={}", line),
-		   &format!("CODE_FILE={}", file),
-		   &format!("CODE_FUNCTION={}", module_path)]);
 }
 
 
@@ -72,6 +56,8 @@ pub fn log_record(record: &Record) {
 	send(&str_keys);
 }
 
+
+
 /// Logger implementation over systemd-journald.
 pub struct JournalLog;
 impl Log for JournalLog {
@@ -93,24 +79,6 @@ impl JournalLog {
 	pub fn init() -> result::Result<(), SetLoggerError> {
 		log::set_logger(&LOGGER)
 	}
-}
-
-fn duration_from_usec(usec: u64) -> time::Duration {
-	let secs = usec / 1_000_000;
-	let sub_usec = (usec % 1_000_000) as u32;
-	let sub_nsec = sub_usec * 1000;
-	time::Duration::new(secs, sub_nsec)
-}
-
-fn usec_from_duration(duration: time::Duration) -> u64 {
-	let sub_usecs = (duration.subsec_nanos() / 1000) as u64;
-	duration.as_secs() * 1_000_000 + sub_usecs
-}
-
-
-fn system_time_from_realtime_usec(usec: u64) -> time::SystemTime {
-	let d = duration_from_usec(usec);
-	time::UNIX_EPOCH + d
 }
 
 // A single log entry from journal.
