@@ -10,7 +10,7 @@ fn test_reverse_walk() {
 	];
 
 	for message in &messages_expected {
-		journald::writer::send(&[&format!("MESSAGE={}", message)]);
+		journald::writer::send_to_journald(&[&format!("MESSAGE={}", message)]);
 	}
 
 	let mut journal = JournalReader::open(&JournalReaderConfig::default())
