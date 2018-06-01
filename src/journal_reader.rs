@@ -2,10 +2,9 @@ use libc::{c_int, size_t};
 use std::ptr;
 use std::collections::BTreeMap;
 use ffi::journal as ffi;
-use super::Result;
+use super::{Result, JournalEntry};
 
 // A single log entry from journal.
-pub type JournalRecord = BTreeMap<String, String>;
 
 /// A reader for systemd journal.
 ///
@@ -83,10 +82,10 @@ impl JournalReader {
 	/// Get and parse the currently journal entry from the journal
 	/// It returns Result<Option<...>> out of convenience for calling
 	/// functions. It always returns Ok(Some(...)) if successful.
-	fn current_entry(&mut self) -> Result<Option<JournalRecord>> {
+	fn current_entry(&mut self) -> Result<Option<JournalEntry>> {
 		unsafe { ffi::sd_journal_restart_data(self.j) }
 
-		let mut ret: JournalRecord = BTreeMap::new();
+		let mut fields  = BTreeMap::new();
 
 		let mut sz: size_t = 0;
 		let data: *mut u8 = ptr::null_mut();
@@ -97,16 +96,18 @@ impl JournalReader {
 				let mut name_value = field.splitn(2, '=');
 				let name = name_value.next().unwrap();
 				let value = name_value.next().unwrap();
-				ret.insert(From::from(name), From::from(value));
+				fields.insert(From::from(name), From::from(value));
 			}
 		}
 
-		Ok(Some(ret))
+		let entry = JournalEntry::from_fields(&fields);
+
+		Ok(Some(entry))
 	}
 
 	/// Read the next entry from the journal. Returns `Ok(None)` if there
 	/// are no more entrys to read.
-	pub fn next_entry(&mut self) -> Result<Option<JournalRecord>> {
+	pub fn next_entry(&mut self) -> Result<Option<JournalEntry>> {
 		if sd_try!(ffi::sd_journal_next(self.j)) == 0 {
 			return Ok(None);
 		}
@@ -116,7 +117,7 @@ impl JournalReader {
 
 	/// Read the previous entry from the journal. Returns `Ok(None)` if there
 	/// are no more entrys to read.
-	pub fn previous_entry(&mut self) -> Result<Option<JournalRecord>> {
+	pub fn previous_entry(&mut self) -> Result<Option<JournalEntry>> {
 		if sd_try!(ffi::sd_journal_previous(self.j)) == 0 {
 			return Ok(None);
 		}

@@ -25,9 +25,10 @@ fn test_reverse_walk() {
 	for _ in 0..3 {
 		let entry = journal
 				.previous_entry()
-				.expect("previous_record() failed");
+				.expect("previous_record() failed")
+				.unwrap();
 
-		messages_actual.insert(0, entry.unwrap().get("MESSAGE").unwrap().to_string());
+		messages_actual.insert(0, entry.get_message().unwrap().to_string());
 	}
 
 	assert!(messages_expected == messages_actual);

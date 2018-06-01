@@ -28,6 +28,10 @@ macro_rules! sd_try {
     })
 }
 
+#[path="journal_entry.rs"]
+mod entry;
+use self::entry::*;
+
 #[path="journal_reader.rs"]
 pub mod reader;
 
