@@ -71,10 +71,10 @@ impl JournalReader {
 		Ok(journal)
 	}
 
-	/// Get and parse the currently journal record from the journal
+	/// Get and parse the currently journal entry from the journal
 	/// It returns Result<Option<...>> out of convenience for calling
 	/// functions. It always returns Ok(Some(...)) if successful.
-	fn get_record(&mut self) -> Result<Option<JournalRecord>> {
+	fn current_entry(&mut self) -> Result<Option<JournalRecord>> {
 		unsafe { ffi::sd_journal_restart_data(self.j) }
 
 		let mut ret: JournalRecord = BTreeMap::new();
@@ -95,24 +95,24 @@ impl JournalReader {
 		Ok(Some(ret))
 	}
 
-	/// Read the next record from the journal. Returns `Ok(None)` if there
-	/// are no more records to read.
-	pub fn next_record(&mut self) -> Result<Option<JournalRecord>> {
+	/// Read the next entry from the journal. Returns `Ok(None)` if there
+	/// are no more entrys to read.
+	pub fn next_entry(&mut self) -> Result<Option<JournalRecord>> {
 		if sd_try!(ffi::sd_journal_next(self.j)) == 0 {
 			return Ok(None);
 		}
 
-		return self.get_record();
+		return self.current_entry();
 	}
 
-	/// Read the previous record from the journal. Returns `Ok(None)` if there
-	/// are no more records to read.
-	pub fn previous_record(&mut self) -> Result<Option<JournalRecord>> {
+	/// Read the previous entry from the journal. Returns `Ok(None)` if there
+	/// are no more entrys to read.
+	pub fn previous_entry(&mut self) -> Result<Option<JournalRecord>> {
 		if sd_try!(ffi::sd_journal_previous(self.j)) == 0 {
 			return Ok(None);
 		}
 
-		return self.get_record();
+		return self.current_entry();
 	}
 
 	/// Seek to a specific position in journal. On success, returns a cursor
