@@ -14,6 +14,17 @@ pub struct JournalReader {
 	j: *mut ffi::sd_journal,
 }
 
+pub struct JournalReaderConfig {
+	pub files: JournalFiles,
+
+	// open only volatile journal files, excluding those which are stored on
+	// persistent storage
+	pub only_volatile: bool,
+
+	// open only journal files generated on the local machine
+	pub only_local: bool,
+}
+
 /// Represents the set of journal files to read.
 #[derive(Clone, Debug)]
 pub enum JournalFiles {
@@ -31,35 +42,33 @@ pub enum JournalSeek {
 	Tail,
 }
 
+impl JournalReaderConfig {
+
+	pub fn default() -> JournalReaderConfig {
+		return JournalReaderConfig {
+			files: JournalFiles::All,
+			only_volatile: false,
+			only_local: false,
+		};
+	}
+
+}
+
 impl JournalReader {
 
 	/// Open the systemd journal for reading.
-	///
-	/// Params:
-	///
-	/// * files: the set of journal files to read. If the calling process
-	///   doesn't have permission to read the system journal, a call to
-	///   `Journal::open` with `System` or `All` will succeed, but system
-	///   journal entries won't be included. This behavior is due to systemd.
-	/// * runtime_only: if true, include only journal entries from the current
-	///   boot. If false, include all entries.
-	/// * local_only: if true, include only journal entries originating from
-	///   localhost. If false, include all entries.
-	pub fn open(
-			files: JournalFiles,
-			runtime_only: bool,
-			local_only: bool) -> Result<JournalReader> {
+	pub fn open(config: &JournalReaderConfig) -> Result<JournalReader> {
 		let mut flags: c_int = 0;
 
-		if runtime_only {
+		if config.only_volatile {
 			flags |= ffi::SD_JOURNAL_RUNTIME_ONLY;
 		}
 
-		if local_only {
+		if config.only_local {
 			flags |= ffi::SD_JOURNAL_LOCAL_ONLY;
 		}
 
-		flags |= match files {
+		flags |= match config.files {
 			JournalFiles::System => ffi::SD_JOURNAL_SYSTEM,
 			JournalFiles::CurrentUser => ffi::SD_JOURNAL_CURRENT_USER,
 			JournalFiles::All => 0,

@@ -1,4 +1,5 @@
 extern crate journald;
+use journald::reader::*;
 
 #[test]
 fn test_reverse_walk() {
@@ -12,12 +13,11 @@ fn test_reverse_walk() {
 		journald::writer::send(&[&format!("MESSAGE={}", message)]);
 	}
 
-	let mut journal = journald::reader::JournalReader
-			::open(journald::reader::JournalFiles::All, false, false)
+	let mut journal = JournalReader::open(&JournalReaderConfig::default())
 			.expect("journal open failed");
 
 	journal
-			.seek(journald::reader::JournalSeek::Tail)
+			.seek(JournalSeek::Tail)
 			.expect("journal seek failed");
 
 	let mut messages_actual = Vec::<String>::new();
