@@ -26,6 +26,10 @@ impl JournalEntry {
 		};
 	}
 
+	pub fn get_field(&self, field: &str) -> Option<&str> {
+		return self.fields.get(field).map(|v| v.as_str());
+	}
+
 	pub fn get_fields(&self) -> &JournalEntryFields {
 		return &self.fields;
 	}
