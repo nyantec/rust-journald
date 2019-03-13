@@ -1,13 +1,18 @@
 use std::collections::BTreeMap;
 
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
+
 type JournalEntryFields = BTreeMap<String, String>;
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct JournalEntry {
 	pub fields: JournalEntryFields,
 }
 
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct JournalEntryTimestamp {
 	pub timestamp_us: i64,
 }

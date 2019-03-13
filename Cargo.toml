@@ -19,3 +19,8 @@ utf8-cstr = "~0.1"
 cstr-argument = "~0.0"
 libsystemd-sys = "0.9"
 
+[dependencies.serde]
+package = "serde"
+version = "1.0.89"
+features = ["derive"]
+optional = true
