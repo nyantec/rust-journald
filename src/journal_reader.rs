@@ -39,6 +39,7 @@ pub enum JournalFiles {
 pub enum JournalSeek {
 	Head,
 	Tail,
+	Cursor(String)
 }
 
 impl JournalReaderConfig {
@@ -168,6 +169,7 @@ impl JournalReader {
 		match seek {
 			JournalSeek::Head => sd_try!(ffi::sd_journal_seek_head(self.j)),
 			JournalSeek::Tail => sd_try!(ffi::sd_journal_seek_tail(self.j)),
+			JournalSeek::Cursor(cur) => sd_try!(ffi::sd_journal_seek_cursor(self.j, ::std::ffi::CString::new(cur)?.as_ptr())),
 		};
 
 		return Ok(());
