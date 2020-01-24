@@ -1,4 +1,4 @@
-use libc::{c_int, size_t};
+use libc::{c_int, size_t, c_char};
 use std::ptr;
 use std::collections::BTreeMap;
 use ffi::journal as ffi;
@@ -121,6 +121,21 @@ impl JournalReader {
 		fields.insert(
 				"__MONOTONIC_TIMESTAMP".to_string(),
 				timestamp_monotonic_us.to_string());
+
+
+		let cursor;
+		unsafe {
+			let b: *mut c_char = ptr::null_mut();
+			ffi::sd_journal_get_cursor(
+					self.j,
+					&b);
+			cursor = ::std::ffi::CString::from_raw(b);
+		}
+
+
+		fields.insert(
+				"__CURSOR".to_string(),
+				cursor.to_string_lossy().to_string());
 
 		let entry = JournalEntry::from_fields(&fields);
 
