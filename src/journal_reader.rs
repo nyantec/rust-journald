@@ -130,7 +130,7 @@ impl JournalReader {
 			ffi::sd_journal_get_cursor(
 					self.j,
 					&b);
-			cursor = ::std::ffi::CString::from_raw(b);
+			cursor = ::std::ffi::CStr::from_ptr(b);
 		}
 
 
