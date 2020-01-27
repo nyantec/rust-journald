@@ -1,3 +1,4 @@
+use libc::free;
 use libc::{c_int, size_t, c_char};
 use std::ptr;
 use std::collections::BTreeMap;
@@ -125,18 +126,19 @@ impl JournalReader {
 
 
 		let cursor;
+		let b: *mut c_char = ptr::null_mut();
 		unsafe {
-			let b: *mut c_char = ptr::null_mut();
 			ffi::sd_journal_get_cursor(
 					self.j,
 					&b);
 			cursor = ::std::ffi::CStr::from_ptr(b);
 		}
 
-
 		fields.insert(
 				"__CURSOR".to_string(),
-				cursor.to_string_lossy().to_string());
+				cursor.to_string_lossy().into_owned());
+
+		unsafe { free(b as *mut ::libc::c_void); }
 
 		let entry = JournalEntry::from_fields(&fields);
 
