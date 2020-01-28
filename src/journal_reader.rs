@@ -1,4 +1,5 @@
-use libc::{c_int, size_t};
+use libc::free;
+use libc::{c_int, size_t, c_char};
 use std::ptr;
 use std::collections::BTreeMap;
 use ffi::journal as ffi;
@@ -39,6 +40,7 @@ pub enum JournalFiles {
 pub enum JournalSeek {
 	Head,
 	Tail,
+	Cursor(String)
 }
 
 impl JournalReaderConfig {
@@ -122,6 +124,22 @@ impl JournalReader {
 				"__MONOTONIC_TIMESTAMP".to_string(),
 				timestamp_monotonic_us.to_string());
 
+
+		let cursor;
+		let b: *mut c_char = ptr::null_mut();
+		unsafe {
+			ffi::sd_journal_get_cursor(
+					self.j,
+					&b);
+			cursor = ::std::ffi::CStr::from_ptr(b);
+		}
+
+		fields.insert(
+				"__CURSOR".to_string(),
+				cursor.to_string_lossy().into_owned());
+
+		unsafe { free(b as *mut ::libc::c_void); }
+
 		let entry = JournalEntry::from_fields(&fields);
 
 		Ok(Some(entry))
@@ -153,6 +171,7 @@ impl JournalReader {
 		match seek {
 			JournalSeek::Head => sd_try!(ffi::sd_journal_seek_head(self.j)),
 			JournalSeek::Tail => sd_try!(ffi::sd_journal_seek_tail(self.j)),
+			JournalSeek::Cursor(cur) => sd_try!(ffi::sd_journal_seek_cursor(self.j, ::std::ffi::CString::new(cur)?.as_ptr())),
 		};
 
 		return Ok(());
