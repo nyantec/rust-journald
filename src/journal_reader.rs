@@ -177,6 +177,16 @@ impl JournalReader {
 		return Ok(());
 	}
 
+	pub fn add_filter(&mut self, filter: &str) -> Result<()> {
+		sd_try!(
+				ffi::sd_journal_add_match(
+						self.j,
+						::std::ffi::CString::new(filter)?.as_ptr() as *mut ::ffi::c_void,
+						0));
+
+		return Ok(());
+	}
+
 }
 
 impl Drop for JournalReader {
