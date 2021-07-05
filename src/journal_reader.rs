@@ -2,28 +2,33 @@ use std::collections::BTreeMap;
 use std::ptr;
 
 use ffi::journal as ffi;
+use ffi_result;
 use libc::{c_char, c_int, free, size_t};
 
 use super::{JournalEntry, Result};
 
 // A single log entry from journal.
 
-/// A reader for systemd journal.
-///
-/// Supports read, next, previous, and seek operations.
-pub struct JournalReader {
-	j: *mut ffi::sd_journal,
-}
-
 pub struct JournalReaderConfig {
+	/// Set of journald files to read.
 	pub files: JournalFiles,
 
-	// open only volatile journal files, excluding those which are stored on
-	// persistent storage
+	/// open only volatile journal files, excluding those which are stored on
+	/// persistent storage
 	pub only_volatile: bool,
 
-	// open only journal files generated on the local machine
+	/// open only journal files generated on the local machine
 	pub only_local: bool,
+}
+
+impl Default for JournalReaderConfig {
+	fn default() -> JournalReaderConfig {
+		JournalReaderConfig {
+			files: JournalFiles::All,
+			only_volatile: false,
+			only_local: false,
+		}
+	}
 }
 
 /// Represents the set of journal files to read.
@@ -44,14 +49,12 @@ pub enum JournalSeek {
 	Cursor(String),
 }
 
-impl JournalReaderConfig {
-	pub fn default() -> JournalReaderConfig {
-		return JournalReaderConfig {
-			files: JournalFiles::All,
-			only_volatile: false,
-			only_local: false,
-		};
-	}
+/// A reader for systemd journal.
+///
+/// Supports read, next, previous, and seek operations.
+#[repr(transparent)]
+pub struct JournalReader {
+	j: *mut ffi::sd_journal,
 }
 
 impl JournalReader {
@@ -74,7 +77,7 @@ impl JournalReader {
 		};
 
 		let mut journal = JournalReader { j: ptr::null_mut() };
-		sd_try!(ffi::sd_journal_open(&mut journal.j, flags));
+		unsafe { ffi_result(ffi::sd_journal_open(&mut journal.j, flags))? };
 
 		Ok(journal)
 	}
@@ -87,8 +90,15 @@ impl JournalReader {
 
 		let mut fields = BTreeMap::new();
 		let mut sz: size_t = 0;
-		let data: *mut u8 = ptr::null_mut();
-		while sd_try!(ffi::sd_journal_enumerate_data(self.j, &data, &mut sz)) > 0 {
+		let mut data: *mut u8 = ptr::null_mut();
+		while unsafe {
+			ffi_result(ffi::sd_journal_enumerate_data(
+				self.j,
+				&mut data as *mut *mut u8,
+				&mut sz,
+			))?
+		} > 0
+		{
 			unsafe {
 				let b = ::std::slice::from_raw_parts_mut(data, sz as usize);
 				let field = String::from_utf8_lossy(b);
@@ -101,6 +111,7 @@ impl JournalReader {
 
 		let mut timestamp_realtime_us: u64 = 0;
 		unsafe {
+			#[allow(clippy::unnecessary_mut_passed)]
 			ffi::sd_journal_get_realtime_usec(self.j, &mut timestamp_realtime_us);
 		}
 
@@ -111,6 +122,7 @@ impl JournalReader {
 
 		let mut timestamp_monotonic_us: u64 = 0;
 		unsafe {
+			#[allow(clippy::unnecessary_mut_passed)]
 			ffi::sd_journal_get_monotonic_usec(self.j, &mut timestamp_monotonic_us, ptr::null());
 		}
 
@@ -135,7 +147,7 @@ impl JournalReader {
 			free(b as *mut ::libc::c_void);
 		}
 
-		let entry = JournalEntry::from_fields(&fields);
+		let entry = JournalEntry::from(&fields);
 
 		Ok(Some(entry))
 	}
@@ -143,46 +155,50 @@ impl JournalReader {
 	/// Read the next entry from the journal. Returns `Ok(None)` if there
 	/// are no more entrys to read.
 	pub fn next_entry(&mut self) -> Result<Option<JournalEntry>> {
-		if sd_try!(ffi::sd_journal_next(self.j)) == 0 {
+		if unsafe { ffi_result(ffi::sd_journal_next(self.j))? } == 0 {
 			return Ok(None);
 		}
 
-		return self.current_entry();
+		self.current_entry()
 	}
 
 	/// Read the previous entry from the journal. Returns `Ok(None)` if there
-	/// are no more entrys to read.
+	/// are no more entries to read.
 	pub fn previous_entry(&mut self) -> Result<Option<JournalEntry>> {
-		if sd_try!(ffi::sd_journal_previous(self.j)) == 0 {
+		if unsafe { ffi_result(ffi::sd_journal_previous(self.j))? } == 0 {
 			return Ok(None);
 		}
 
-		return self.current_entry();
+		self.current_entry()
 	}
 
 	/// Seek to a specific position in journal. On success, returns a cursor
 	/// to the current entry.
 	pub fn seek(&mut self, seek: JournalSeek) -> Result<()> {
 		match seek {
-			JournalSeek::Head => sd_try!(ffi::sd_journal_seek_head(self.j)),
-			JournalSeek::Tail => sd_try!(ffi::sd_journal_seek_tail(self.j)),
-			JournalSeek::Cursor(cur) => sd_try!(ffi::sd_journal_seek_cursor(
-				self.j,
-				::std::ffi::CString::new(cur)?.as_ptr()
-			)),
+			JournalSeek::Head => unsafe { ffi_result(ffi::sd_journal_seek_head(self.j))? },
+			JournalSeek::Tail => unsafe { ffi_result(ffi::sd_journal_seek_tail(self.j))? },
+			JournalSeek::Cursor(cur) => unsafe {
+				ffi_result(ffi::sd_journal_seek_cursor(
+					self.j,
+					::std::ffi::CString::new(cur)?.as_ptr(),
+				))?
+			},
 		};
 
-		return Ok(());
+		Ok(())
 	}
 
 	pub fn add_filter(&mut self, filter: &str) -> Result<()> {
-		sd_try!(ffi::sd_journal_add_match(
-			self.j,
-			::std::ffi::CString::new(filter)?.as_ptr() as *mut ::ffi::c_void,
-			0
-		));
+		unsafe {
+			ffi_result(ffi::sd_journal_add_match(
+				self.j,
+				::std::ffi::CString::new(filter)?.as_ptr() as *mut ::ffi::c_void,
+				0,
+			))?
+		};
 
-		return Ok(());
+		Ok(())
 	}
 }
 
