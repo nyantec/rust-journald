@@ -7,6 +7,10 @@ description = "A rust binding for the systemd journald api"
 repository = "https://github.com/nyantec/rust-journald"
 documentation = "https://docs.rs/journald"
 
+[features]
+default = []
+systemd_v245 = [ "libsystemd-sys/systemd_v245" ]
+
 [dependencies]
 log = "~0.4"
 libc = "~0.2"
