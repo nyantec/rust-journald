@@ -1,9 +1,10 @@
-use libc::free;
-use libc::{c_int, size_t, c_char};
-use std::ptr;
 use std::collections::BTreeMap;
+use std::ptr;
+
 use ffi::journal as ffi;
-use super::{Result, JournalEntry};
+use libc::{c_char, c_int, free, size_t};
+
+use super::{JournalEntry, Result};
 
 // A single log entry from journal.
 
@@ -40,11 +41,10 @@ pub enum JournalFiles {
 pub enum JournalSeek {
 	Head,
 	Tail,
-	Cursor(String)
+	Cursor(String),
 }
 
 impl JournalReaderConfig {
-
 	pub fn default() -> JournalReaderConfig {
 		return JournalReaderConfig {
 			files: JournalFiles::All,
@@ -52,11 +52,9 @@ impl JournalReaderConfig {
 			only_local: false,
 		};
 	}
-
 }
 
 impl JournalReader {
-
 	/// Open the systemd journal for reading.
 	pub fn open(config: &JournalReaderConfig) -> Result<JournalReader> {
 		let mut flags: c_int = 0;
@@ -87,7 +85,7 @@ impl JournalReader {
 	fn current_entry(&mut self) -> Result<Option<JournalEntry>> {
 		unsafe { ffi::sd_journal_restart_data(self.j) }
 
-		let mut fields  = BTreeMap::new();
+		let mut fields = BTreeMap::new();
 		let mut sz: size_t = 0;
 		let data: *mut u8 = ptr::null_mut();
 		while sd_try!(ffi::sd_journal_enumerate_data(self.j, &data, &mut sz)) > 0 {
@@ -103,42 +101,39 @@ impl JournalReader {
 
 		let mut timestamp_realtime_us: u64 = 0;
 		unsafe {
-			ffi::sd_journal_get_realtime_usec(
-					self.j,
-					&mut timestamp_realtime_us);
+			ffi::sd_journal_get_realtime_usec(self.j, &mut timestamp_realtime_us);
 		}
 
 		fields.insert(
-				"__REALTIME_TIMESTAMP".to_string(),
-				timestamp_realtime_us.to_string());
+			"__REALTIME_TIMESTAMP".to_string(),
+			timestamp_realtime_us.to_string(),
+		);
 
 		let mut timestamp_monotonic_us: u64 = 0;
 		unsafe {
-			ffi::sd_journal_get_monotonic_usec(
-					self.j,
-					&mut timestamp_monotonic_us,
-					ptr::null());
+			ffi::sd_journal_get_monotonic_usec(self.j, &mut timestamp_monotonic_us, ptr::null());
 		}
 
 		fields.insert(
-				"__MONOTONIC_TIMESTAMP".to_string(),
-				timestamp_monotonic_us.to_string());
-
+			"__MONOTONIC_TIMESTAMP".to_string(),
+			timestamp_monotonic_us.to_string(),
+		);
 
 		let cursor;
 		let b: *mut c_char = ptr::null_mut();
 		unsafe {
-			ffi::sd_journal_get_cursor(
-					self.j,
-					&b);
+			ffi::sd_journal_get_cursor(self.j, &b);
 			cursor = ::std::ffi::CStr::from_ptr(b);
 		}
 
 		fields.insert(
-				"__CURSOR".to_string(),
-				cursor.to_string_lossy().into_owned());
+			"__CURSOR".to_string(),
+			cursor.to_string_lossy().into_owned(),
+		);
 
-		unsafe { free(b as *mut ::libc::c_void); }
+		unsafe {
+			free(b as *mut ::libc::c_void);
+		}
 
 		let entry = JournalEntry::from_fields(&fields);
 
@@ -171,26 +166,27 @@ impl JournalReader {
 		match seek {
 			JournalSeek::Head => sd_try!(ffi::sd_journal_seek_head(self.j)),
 			JournalSeek::Tail => sd_try!(ffi::sd_journal_seek_tail(self.j)),
-			JournalSeek::Cursor(cur) => sd_try!(ffi::sd_journal_seek_cursor(self.j, ::std::ffi::CString::new(cur)?.as_ptr())),
+			JournalSeek::Cursor(cur) => sd_try!(ffi::sd_journal_seek_cursor(
+				self.j,
+				::std::ffi::CString::new(cur)?.as_ptr()
+			)),
 		};
 
 		return Ok(());
 	}
 
 	pub fn add_filter(&mut self, filter: &str) -> Result<()> {
-		sd_try!(
-				ffi::sd_journal_add_match(
-						self.j,
-						::std::ffi::CString::new(filter)?.as_ptr() as *mut ::ffi::c_void,
-						0));
+		sd_try!(ffi::sd_journal_add_match(
+			self.j,
+			::std::ffi::CString::new(filter)?.as_ptr() as *mut ::ffi::c_void,
+			0
+		));
 
 		return Ok(());
 	}
-
 }
 
 impl Drop for JournalReader {
-
 	fn drop(&mut self) {
 		if !self.j.is_null() {
 			unsafe {
@@ -198,5 +194,4 @@ impl Drop for JournalReader {
 			}
 		}
 	}
-
 }
