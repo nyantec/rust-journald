@@ -1,4 +1,4 @@
-use ffi::{array_to_iovecs, journal as ffi};
+use ffi::{c_void, const_iovec, journal as ffi, size_t};
 use ffi_result;
 use libc::c_int;
 
@@ -21,4 +21,13 @@ pub fn submit(entry: &JournalEntry) -> Result<()> {
 	};
 
 	Ok(())
+}
+
+pub fn array_to_iovecs(args: &[&str]) -> Vec<const_iovec> {
+	args.iter()
+		.map(|d| const_iovec {
+			iov_base: d.as_ptr() as *const c_void,
+			iov_len: d.len() as size_t,
+		})
+		.collect()
 }

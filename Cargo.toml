@@ -12,5 +12,5 @@ log = "~0.4"
 libc = "~0.2"
 utf8-cstr = "~0.1"
 cstr-argument = "~0.0"
-libsystemd-sys = "0.2"
+libsystemd-sys = "0.9"
 
