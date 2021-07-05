@@ -39,7 +39,10 @@ fn test_reverse_walk() {
 			.unwrap();
 
 		let entry_message = entry.get_message().unwrap().to_string();
-		assert!(entry_message == messages_expected[messages_expected.len() - i]);
+		assert_eq!(
+			entry_message,
+			messages_expected[messages_expected.len() - i]
+		);
 
 		let entry_time = entry.get_wallclock_time().unwrap().timestamp_us / 1000000;
 
