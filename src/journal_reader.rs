@@ -90,17 +90,17 @@ impl JournalReader {
 
 		let mut fields = BTreeMap::new();
 		let mut sz: size_t = 0;
-		let mut data: *mut u8 = ptr::null_mut();
+		let mut data: *const u8 = ptr::null();
 		while unsafe {
 			ffi_result(ffi::sd_journal_enumerate_data(
 				self.j,
-				&mut data as *mut *mut u8,
+				&mut data as *mut *const u8,
 				&mut sz,
 			))?
 		} > 0
 		{
 			unsafe {
-				let b = ::std::slice::from_raw_parts_mut(data, sz as usize);
+				let b = ::std::slice::from_raw_parts(data, sz as usize);
 				let field = String::from_utf8_lossy(b);
 				let mut name_value = field.splitn(2, '=');
 				let name = name_value.next().unwrap();
@@ -111,7 +111,6 @@ impl JournalReader {
 
 		let mut timestamp_realtime_us: u64 = 0;
 		unsafe {
-			#[allow(clippy::unnecessary_mut_passed)]
 			ffi::sd_journal_get_realtime_usec(self.j, &mut timestamp_realtime_us);
 		}
 
@@ -122,8 +121,11 @@ impl JournalReader {
 
 		let mut timestamp_monotonic_us: u64 = 0;
 		unsafe {
-			#[allow(clippy::unnecessary_mut_passed)]
-			ffi::sd_journal_get_monotonic_usec(self.j, &mut timestamp_monotonic_us, ptr::null());
+			ffi::sd_journal_get_monotonic_usec(
+				self.j,
+				&mut timestamp_monotonic_us,
+				ptr::null_mut(),
+			);
 		}
 
 		fields.insert(
@@ -132,9 +134,9 @@ impl JournalReader {
 		);
 
 		let cursor;
-		let b: *mut c_char = ptr::null_mut();
+		let mut b: *const c_char = ptr::null();
 		unsafe {
-			ffi::sd_journal_get_cursor(self.j, &b);
+			ffi::sd_journal_get_cursor(self.j, &mut b);
 			cursor = ::std::ffi::CStr::from_ptr(b);
 		}
 
