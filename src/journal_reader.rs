@@ -191,6 +191,18 @@ impl JournalReader {
 		Ok(())
 	}
 
+	/// Sync wait until timeout for new journal messages
+	pub fn wait_timeout(&mut self, timeout: u64) -> Result<()> {
+		unsafe { ffi_result(ffi::sd_journal_wait(self.j, timeout))? };
+
+		Ok(())
+	}
+
+	/// Sync wait forever for new journal messages
+	pub fn wait(&mut self) -> Result<()> {
+		self.wait_timeout(u64::MAX)
+	}
+
 	pub fn add_filter(&mut self, filter: &str) -> Result<()> {
 		unsafe {
 			ffi_result(ffi::sd_journal_add_match(
