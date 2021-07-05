@@ -10,5 +10,5 @@ In `Cargo.toml`:
 
 ```toml
 [dependencies]
-journald = "~0.4"
+journald = "~0.7"
 ```
