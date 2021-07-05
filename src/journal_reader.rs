@@ -19,6 +19,16 @@ pub struct JournalReaderConfig {
 
 	/// open only journal files generated on the local machine
 	pub only_local: bool,
+
+	/// read from all namespaces.
+	/// only applicable with open_namespace.
+	#[cfg(feature = "systemd_v245")]
+	pub all_namespaces: bool,
+
+	/// read from the specified namespace and the default namespace.
+	/// only applicable with open_namespace.
+	#[cfg(feature = "systemd_v245")]
+	pub include_default_namespace: bool,
 }
 
 impl Default for JournalReaderConfig {
@@ -27,6 +37,12 @@ impl Default for JournalReaderConfig {
 			files: JournalFiles::All,
 			only_volatile: false,
 			only_local: false,
+
+			#[cfg(feature = "systemd_v245")]
+			all_namespaces: false,
+
+			#[cfg(feature = "systemd_v245")]
+			include_default_namespace: false,
 		}
 	}
 }
@@ -78,6 +94,45 @@ impl JournalReader {
 
 		let mut journal = JournalReader { j: ptr::null_mut() };
 		unsafe { ffi_result(ffi::sd_journal_open(&mut journal.j, flags))? };
+
+		Ok(journal)
+	}
+
+	/// Open the systemd journal for reading from a specific namespace.
+	#[cfg(feature = "systemd_v245")]
+	pub fn open_namespace(config: &JournalReaderConfig, namespace: &str) -> Result<Self> {
+		let mut flags: c_int = 0;
+
+		if config.only_volatile {
+			flags |= ffi::SD_JOURNAL_RUNTIME_ONLY;
+		}
+
+		if config.only_local {
+			flags |= ffi::SD_JOURNAL_LOCAL_ONLY;
+		}
+
+		flags |= match config.files {
+			JournalFiles::System => ffi::SD_JOURNAL_SYSTEM,
+			JournalFiles::CurrentUser => ffi::SD_JOURNAL_CURRENT_USER,
+			JournalFiles::All => 0,
+		};
+
+		if config.all_namespaces {
+			flags |= ffi::SD_JOURNAL_ALL_NAMESPACES;
+		}
+
+		if config.include_default_namespace {
+			flags |= ffi::SD_JOURNAL_INCLUDE_DEFAULT_NAMESPACE;
+		}
+
+		let mut journal = JournalReader { j: ptr::null_mut() };
+		unsafe {
+			ffi_result(ffi::sd_journal_open_namespace(
+				&mut journal.j,
+				::std::ffi::CString::new(namespace)?.as_ptr(),
+				flags,
+			))
+		}?;
 
 		Ok(journal)
 	}
