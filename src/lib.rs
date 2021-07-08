@@ -1,9 +1,6 @@
-extern crate cstr_argument;
-extern crate libc;
-extern crate libsystemd_sys as ffi;
-extern crate log;
-
 pub use std::io::{Error, Result};
+
+use libsystemd_sys as ffi;
 
 /// Convert a systemd ffi return value into a Result
 pub fn ffi_result(ret: ffi::c_int) -> Result<ffi::c_int> {

@@ -1,11 +1,11 @@
 use std::collections::BTreeMap;
 use std::ptr;
 
-use ffi::journal as ffi;
-use ffi_result;
 use libc::{c_char, c_int, free, size_t};
+use libsystemd_sys::journal as ffi;
 
 use super::{JournalEntry, Result};
+use crate::ffi_result;
 
 // A single log entry from journal.
 
@@ -262,7 +262,7 @@ impl JournalReader {
 		unsafe {
 			ffi_result(ffi::sd_journal_add_match(
 				self.j,
-				::std::ffi::CString::new(filter)?.as_ptr() as *mut ::ffi::c_void,
+				std::ffi::CString::new(filter)?.as_ptr() as *mut std::ffi::c_void,
 				0,
 			))?
 		};

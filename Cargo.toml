@@ -6,6 +6,7 @@ license = "LGPL-2.1+"
 description = "A rust binding for the systemd journald api"
 repository = "https://github.com/nyantec/rust-journald"
 documentation = "https://docs.rs/journald"
+edition = "2018"
 
 [features]
 default = []
