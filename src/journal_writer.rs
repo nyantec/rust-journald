@@ -1,8 +1,8 @@
-use ffi::{c_void, const_iovec, journal as ffi, size_t};
-use ffi_result;
 use libc::c_int;
+use libsystemd_sys::{c_void, const_iovec, journal as ffi, size_t};
 
 use super::{JournalEntry, Result};
+use crate::ffi_result;
 
 pub fn submit(entry: &JournalEntry) -> Result<()> {
 	let mut fields = Vec::<String>::new();
