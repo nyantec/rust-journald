@@ -30,7 +30,6 @@ macro_rules! sd_try {
 mod entry;
 pub use self::entry::*;
 
-#[path = "journal_reader.rs"]
 pub mod reader;
 
 #[path = "journal_writer.rs"]
