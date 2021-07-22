@@ -17,7 +17,9 @@ impl<'a> Iterator for JournalBlockingIter<'a> {
 		let ret = self.reader.next_entry();
 
 		let ret = if ret.is_ok() && ret.as_ref().unwrap().is_none() {
-			self.reader.wait();
+			if let Err(e) = self.reader.wait() {
+				return Some(Err(e));
+			}
 			self.reader.next_entry()
 		} else {
 			ret
