@@ -49,3 +49,69 @@ fn test_reverse_walk() {
 		assert!((entry_time - now_usec).abs() < TIME_EPSILON_SECONDS)
 	}
 }
+
+#[test]
+fn iter_blocking() {
+	let now_usec: i64 = SystemTime::now()
+		.duration_since(UNIX_EPOCH)
+		.unwrap()
+		.as_secs() as i64;
+
+	let messages_expected = vec![
+		"iter: rust-systemd test 1",
+		"iter: rust-systemd test 2",
+		"iter: rust-systemd test 3",
+	];
+
+	let mut journal =
+		JournalReader::open(&JournalReaderConfig::default()).expect("journal open failed");
+
+	std::thread::sleep(std::time::Duration::from_micros(1000));
+
+	// we want a forward walk
+	journal
+		.seek(JournalSeek::Tail)
+		.expect("journal seek failed");
+
+	for message in &messages_expected {
+		let mut entry = JournalEntry::new();
+		entry.set_message(message);
+		journald::writer::submit(&entry).expect("journald write failed");
+	}
+
+	// give systemd internals some time
+	std::thread::sleep(std::time::Duration::from_micros(1000));
+
+	let iter = journal.to_blocking_iter();
+
+	let mut j = 0;
+	let mut i = messages_expected.len();
+	for entry in iter {
+		let entry = entry.expect("failed to iterate");
+
+		let entry_message = entry.get_message().unwrap().to_string();
+		if !entry_message.starts_with("iter: ") {
+			j += 1;
+			// other logs should not create as many logs
+			assert!(j < 20);
+			continue;
+		}
+
+		let entry_time = entry.get_wallclock_time().unwrap().timestamp_us / 1000000;
+
+		println!("{}: {}", entry_message, entry_time);
+
+		assert_eq!(
+			entry_message,
+			messages_expected[messages_expected.len() - i]
+		);
+
+		let entry_time = entry.get_wallclock_time().unwrap().timestamp_us / 1000000;
+		assert!((entry_time - now_usec).abs() < TIME_EPSILON_SECONDS);
+
+		i -= 1;
+		if i == 0 {
+			return;
+		}
+	}
+}

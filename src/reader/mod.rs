@@ -7,6 +7,10 @@ use libsystemd_sys::journal as ffi;
 use super::{JournalEntry, Result};
 use crate::ffi_result;
 
+mod iter;
+#[doc(inline)]
+pub use iter::JournalBlockingIter;
+
 // A single log entry from journal.
 
 pub struct JournalReaderConfig {
@@ -268,6 +272,11 @@ impl JournalReader {
 		};
 
 		Ok(())
+	}
+
+	/// Create a blocking Iterator from the reader.
+	pub fn to_blocking_iter(&mut self) -> JournalBlockingIter {
+		JournalBlockingIter { reader: self }
 	}
 }
 
