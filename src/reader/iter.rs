@@ -58,15 +58,14 @@ impl<'a> Iterator for JournalBlockingIter<'a> {
 	}
 }
 
-		let ret = if ret.is_ok() && ret.as_ref().unwrap().is_none() {
-			if let Err(e) = self.reader.wait() {
-				return Some(Err(e));
-			}
-			self.reader.next_entry()
-		} else {
-			ret
-		};
+pub struct JournalIter<'a> {
+	pub(crate) reader: &'a mut JournalReader,
+}
 
-		ret.transpose()
+impl<'a> Iterator for JournalIter<'a> {
+	type Item = Result<JournalEntry>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.reader.next_entry().transpose()
 	}
 }

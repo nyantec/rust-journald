@@ -12,7 +12,7 @@ use crate::ffi_result;
 
 mod iter;
 #[doc(inline)]
-pub use iter::JournalBlockingIter;
+pub use iter::{JournalBlockingIter, JournalIter};
 
 // A single log entry from journal.
 
@@ -314,6 +314,11 @@ impl JournalReader {
 	/// Create a blocking Iterator with a timeout of `timeout`.
 	pub fn to_blocking_iter_timeout(&mut self, timeout: Duration) -> Result<JournalBlockingIter> {
 		JournalBlockingIter::new(self, timeout)
+	}
+
+	/// Create a non blocking Iterator.
+	pub fn to_iter(&mut self) -> JournalIter {
+		JournalIter { reader: self }
 	}
 }
 
