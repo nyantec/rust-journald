@@ -1,5 +1,8 @@
 use std::collections::BTreeMap;
+use std::convert::TryFrom;
+use std::io::Error;
 use std::ptr;
+use std::time::Duration;
 
 use libc::{c_char, c_int, free, size_t};
 use libsystemd_sys::journal as ffi;
@@ -67,6 +70,28 @@ pub enum JournalSeek {
 	Head,
 	Tail,
 	Cursor(String),
+}
+
+/// Wakeup event types
+#[repr(i32)]
+#[derive(Debug, Copy, Clone, PartialOrd, PartialEq)]
+pub enum WakeupType {
+	NOP = ffi::SD_JOURNAL_NOP,
+	APPEND = ffi::SD_JOURNAL_APPEND,
+	INVALIDATE = ffi::SD_JOURNAL_INVALIDATE,
+}
+
+impl TryFrom<i32> for WakeupType {
+	type Error = Error;
+
+	fn try_from(value: i32) -> Result<Self> {
+		Ok(match value {
+			ffi::SD_JOURNAL_NOP => WakeupType::NOP,
+			ffi::SD_JOURNAL_APPEND => WakeupType::APPEND,
+			ffi::SD_JOURNAL_INVALIDATE => WakeupType::INVALIDATE,
+			_ => return Err(Error::from_raw_os_error(libc::EINVAL)),
+		})
+	}
 }
 
 /// A reader for systemd journal.
@@ -251,15 +276,19 @@ impl JournalReader {
 	}
 
 	/// Sync wait until timeout for new journal messages
-	pub fn wait_timeout(&mut self, timeout: u64) -> Result<()> {
-		unsafe { ffi_result(ffi::sd_journal_wait(self.j, timeout))? };
-
-		Ok(())
+	pub fn wait_timeout(&mut self, timeout: Duration) -> Result<WakeupType> {
+		self.wait_usec(duration_to_usec(timeout)?)
 	}
 
 	/// Sync wait forever for new journal messages
-	pub fn wait(&mut self) -> Result<()> {
-		self.wait_timeout(u64::MAX)
+	pub fn wait(&mut self) -> Result<WakeupType> {
+		self.wait_usec(u64::MAX)
+	}
+
+	/// Wait for an amount of usec
+	pub(crate) fn wait_usec(&mut self, usec: u64) -> Result<WakeupType> {
+		let ret = unsafe { ffi_result(ffi::sd_journal_wait(self.j, usec))? };
+		Ok(WakeupType::try_from(ret)?)
 	}
 
 	pub fn add_filter(&mut self, filter: &str) -> Result<()> {
@@ -276,7 +305,15 @@ impl JournalReader {
 
 	/// Create a blocking Iterator from the reader.
 	pub fn to_blocking_iter(&mut self) -> JournalBlockingIter {
-		JournalBlockingIter { reader: self }
+		JournalBlockingIter {
+			reader: self,
+			timeout: u64::MAX,
+		}
+	}
+
+	/// Create a blocking Iterator with a timeout of `timeout`.
+	pub fn to_blocking_iter_timeout(&mut self, timeout: Duration) -> Result<JournalBlockingIter> {
+		JournalBlockingIter::new(self, timeout)
 	}
 }
 
@@ -288,4 +325,11 @@ impl Drop for JournalReader {
 			}
 		}
 	}
+}
+
+pub(crate) fn duration_to_usec(duration: Duration) -> Result<u64> {
+	if duration.as_micros() > u64::MAX as u128 {
+		return Err(Error::from_raw_os_error(libc::EOVERFLOW));
+	}
+	Ok(duration.as_micros() as u64)
 }
