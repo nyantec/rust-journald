@@ -288,7 +288,7 @@ impl JournalReader {
 	/// Wait for an amount of usec
 	pub(crate) fn wait_usec(&mut self, usec: u64) -> Result<WakeupType> {
 		let ret = unsafe { ffi_result(ffi::sd_journal_wait(self.j, usec))? };
-		Ok(WakeupType::try_from(ret)?)
+		WakeupType::try_from(ret)
 	}
 
 	pub fn add_filter(&mut self, filter: &str) -> Result<()> {
@@ -304,7 +304,7 @@ impl JournalReader {
 	}
 
 	/// Create a blocking Iterator from the reader.
-	pub fn to_blocking_iter(&mut self) -> JournalBlockingIter {
+	pub fn as_blocking_iter(&mut self) -> JournalBlockingIter {
 		JournalBlockingIter {
 			reader: self,
 			timeout: u64::MAX,
@@ -312,12 +312,12 @@ impl JournalReader {
 	}
 
 	/// Create a blocking Iterator with a timeout of `timeout`.
-	pub fn to_blocking_iter_timeout(&mut self, timeout: Duration) -> Result<JournalBlockingIter> {
+	pub fn as_blocking_iter_timeout(&mut self, timeout: Duration) -> Result<JournalBlockingIter> {
 		JournalBlockingIter::new(self, timeout)
 	}
 
 	/// Create a non blocking Iterator.
-	pub fn to_iter(&mut self) -> JournalIter {
+	pub fn as_iter(&mut self) -> JournalIter {
 		JournalIter { reader: self }
 	}
 }

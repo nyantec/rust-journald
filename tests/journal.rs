@@ -105,7 +105,7 @@ fn iter_blocking() {
 	// give systemd internals some time
 	std::thread::sleep(std::time::Duration::from_micros(1000));
 
-	let iter = journal.to_blocking_iter();
+	let iter = journal.as_blocking_iter();
 
 	let mut j = 0;
 	let mut i = messages_expected.len();
