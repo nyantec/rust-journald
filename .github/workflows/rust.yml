@@ -4,6 +4,9 @@ name: Continuous integration
 
 jobs:
   check:
+    strategy:
+      matrix:
+        features: [ libsystemd-sys, open ]
     name: Check
     runs-on: ubuntu-latest
     steps:
@@ -20,8 +23,12 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: check
+          args: --no-default-features --features ${{ matrix.features }}
 
   test:
+    strategy:
+      matrix:
+        features: [ libsystemd-sys, open ]
     name: Test Suite
     runs-on: ubuntu-latest
     steps:
@@ -38,6 +45,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: test
+          args: --no-default-features --features ${{ matrix.features }}
         timeout-minutes: 6
 
   fmt:
