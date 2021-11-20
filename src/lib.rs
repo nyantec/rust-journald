@@ -1,17 +1,20 @@
-use std::env::var;
 pub use std::io::{Error, Result};
+#[cfg(feature = "open")]
+use std::sync::atomic::AtomicUsize;
+#[cfg(feature = "open")]
 use std::sync::atomic::Ordering::SeqCst;
-use std::sync::atomic::{AtomicBool, AtomicUsize};
 
 #[cfg(feature = "open")]
 use dlopen::wrapper::{Container, WrapperApi};
-use libc::{c_char, c_int, c_void, size_t};
+use libc::c_int;
+#[cfg(feature = "open")]
+use libc::{c_char, c_void, size_t};
 #[cfg(feature = "open")]
 #[macro_use]
 extern crate dlopen_derive;
 
-#[cfg(feature = "libsystemd-sys")]
-use libsystemd_sys as ffi;
+//#[cfg(feature = "libsystemd-sys")]
+//use libsystemd_sys as ffi;
 
 #[path = "journal_entry.rs"]
 mod entry;
@@ -120,7 +123,7 @@ pub(crate) fn open_systemd<'a>() -> Result<&'a mut Container<SystemdApi>> {
 		return Err(x);
 	}
 
-	let mut api = api.unwrap();
+	let api = api.unwrap();
 	unsafe { SYSTEMD_API = Some(api) };
 	SYSTEMD_API_LOADING.store(4, SeqCst);
 	Ok(unsafe { SYSTEMD_API.as_mut() }.unwrap())

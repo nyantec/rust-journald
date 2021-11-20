@@ -4,7 +4,9 @@ use std::io::Error;
 use std::ptr;
 use std::time::Duration;
 
-use libc::{c_char, c_int, c_void, free, size_t, uname};
+#[cfg(feature = "open")]
+use libc::c_void;
+use libc::{c_char, c_int, free, size_t};
 #[cfg(feature = "libsystemd-sys")]
 use libsystemd_sys::journal as ffi;
 
@@ -234,20 +236,6 @@ impl JournalReader {
 		let mut sz: size_t = 0;
 		let mut data: *const u8 = ptr::null();
 
-		#[cfg(feature = "libsystemd-sys")]
-		let iter_fn = || {
-			ffi_result(unsafe {
-				ffi::sd_journal_enumerate_data(self.j, &mut data as *mut *const u8, &mut sz)
-			})
-		};
-
-		#[cfg(feature = "open")]
-		let iter_fn = || {
-			ffi_result(unsafe {
-				api.sd_journal_enumerate_data(self.j, &mut data as *mut *const u8, &mut sz)
-			})
-		};
-
 		while unsafe {
 			#[cfg(feature = "libsystemd-sys")]
 			{
@@ -410,20 +398,21 @@ impl JournalReader {
 		WakeupType::try_from(ret)
 	}
 	pub fn add_filter(&mut self, filter: &str) -> Result<()> {
-		let data = std::ffi::CString::new(filter)?.as_ptr();
-		println!("foobar");
 		ffi_result(unsafe {
 			#[cfg(feature = "libsystemd-sys")]
 			{
-				println!("j: {:p}, data: {:p}", self.j, data);
-				ffi::sd_journal_add_match(self.j, data as *mut std::ffi::c_void, 0)
+				ffi::sd_journal_add_match(
+					self.j,
+					std::ffi::CString::new(filter)?.as_ptr() as *mut std::ffi::c_void,
+					0,
+				)
 			}
 
 			#[cfg(feature = "open")]
 			{
 				super::open_systemd()?.sd_journal_add_match(
 					self.j,
-					data as *mut std::ffi::c_void,
+					std::ffi::CString::new(filter)?.as_ptr() as *mut std::ffi::c_void,
 					0,
 				)
 			}
