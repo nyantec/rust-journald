@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 type JournalEntryFields = BTreeMap<String, String>;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
 pub struct JournalEntry {
 	pub fields: JournalEntryFields,
@@ -69,14 +69,6 @@ impl JournalEntry {
 			.get("__MONOTONIC_TIMESTAMP")
 			.and_then(|v| v.parse::<i64>().ok())
 			.map(|v| JournalEntryTimestamp { timestamp_us: v })
-	}
-}
-
-impl Default for JournalEntry {
-	fn default() -> Self {
-		JournalEntry {
-			fields: BTreeMap::<String, String>::new(),
-		}
 	}
 }
 

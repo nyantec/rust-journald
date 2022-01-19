@@ -43,7 +43,7 @@ dependencies = [
 
 [[package]]
 name = "journald"
-version = "0.6.0"
+version = "0.7.0"
 dependencies = [
  "cstr-argument",
  "libc",
