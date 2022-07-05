@@ -185,11 +185,10 @@ impl JournalReader {
 		{
 			unsafe {
 				let b = ::std::slice::from_raw_parts(data, sz as usize);
-				let field = String::from_utf8_lossy(b);
-				let mut name_value = field.splitn(2, '=');
-				let name = name_value.next().unwrap();
-				let value = name_value.next().unwrap();
-				fields.insert(From::from(name), From::from(value));
+				let mut name_value = b.splitn(2, |x| *x == b'=');
+				let name = String::from_utf8_lossy(name_value.next().unwrap()).into_owned();
+				let value = name_value.next().unwrap().to_vec();
+				fields.insert(name, value);
 			}
 		}
 
@@ -200,7 +199,7 @@ impl JournalReader {
 
 		fields.insert(
 			"__REALTIME_TIMESTAMP".to_string(),
-			timestamp_realtime_us.to_string(),
+			timestamp_realtime_us.to_string().as_bytes().to_vec(),
 		);
 
 		let mut timestamp_monotonic_us: u64 = 0;
@@ -214,7 +213,7 @@ impl JournalReader {
 
 		fields.insert(
 			"__MONOTONIC_TIMESTAMP".to_string(),
-			timestamp_monotonic_us.to_string(),
+			timestamp_monotonic_us.to_string().as_bytes().to_vec(),
 		);
 
 		let cursor;
@@ -226,7 +225,7 @@ impl JournalReader {
 
 		fields.insert(
 			"__CURSOR".to_string(),
-			cursor.to_string_lossy().into_owned(),
+			cursor.to_string_lossy().into_owned().as_bytes().to_vec(),
 		);
 
 		unsafe {
