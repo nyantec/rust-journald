@@ -1,9 +1,11 @@
+use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::str;
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-type JournalEntryFields = BTreeMap<String, String>;
+type JournalEntryFields = BTreeMap<String, Vec<u8>>;
 
 #[derive(Clone, Debug, Default)]
 #[cfg_attr(feature = "serde", derive(Deserialize, Serialize))]
@@ -27,20 +29,32 @@ impl JournalEntry {
 		Self::from(fields)
 	}
 
-	pub fn get_field(&self, field: &str) -> Option<&str> {
-		self.fields.get(field).map(|v| v.as_str())
+	pub fn get_field_binary(&self, field: &str) -> Option<&[u8]> {
+		self.fields.get(field).map(|v| v.as_slice())
+	}
+
+	pub fn get_field_string(&self, field: &str) -> Result<Option<&str>, str::Utf8Error> {
+		self.fields
+			.get(field)
+			.map(|v| str::from_utf8(v))
+			.transpose()
+	}
+
+	pub fn get_field_string_lossy(&self, field: &str) -> Option<Cow<'_, str>> {
+		self.fields.get(field).map(|v| String::from_utf8_lossy(v))
 	}
 
 	pub fn get_fields(&self) -> &JournalEntryFields {
 		&self.fields
 	}
 
-	pub fn get_message(&self) -> Option<&str> {
-		self.fields.get("MESSAGE").map(|v| v.as_ref())
+	pub fn get_message(&self) -> Option<Cow<'_, str>> {
+		self.get_field_string_lossy("MESSAGE")
 	}
 
 	pub fn set_message(&mut self, msg: &str) {
-		self.fields.insert("MESSAGE".to_string(), msg.to_string());
+		self.fields
+			.insert("MESSAGE".to_string(), msg.as_bytes().to_vec());
 	}
 
 	pub fn get_wallclock_time(&self) -> Option<JournalEntryTimestamp> {
@@ -51,22 +65,19 @@ impl JournalEntry {
 	}
 
 	pub fn get_source_wallclock_time(&self) -> Option<JournalEntryTimestamp> {
-		self.fields
-			.get("_SOURCE_REALTIME_TIMESTAMP")
+		self.get_field_string_lossy("_SOURCE_REALTIME_TIMESTAMP")
 			.and_then(|v| v.parse::<i64>().ok())
 			.map(|v| JournalEntryTimestamp { timestamp_us: v })
 	}
 
 	pub fn get_reception_wallclock_time(&self) -> Option<JournalEntryTimestamp> {
-		self.fields
-			.get("__REALTIME_TIMESTAMP")
+		self.get_field_string_lossy("__REALTIME_TIMESTAMP")
 			.and_then(|v| v.parse::<i64>().ok())
 			.map(|v| JournalEntryTimestamp { timestamp_us: v })
 	}
 
 	pub fn get_monotonic_time(&self) -> Option<JournalEntryTimestamp> {
-		self.fields
-			.get("__MONOTONIC_TIMESTAMP")
+		self.get_field_string_lossy("__MONOTONIC_TIMESTAMP")
 			.and_then(|v| v.parse::<i64>().ok())
 			.map(|v| JournalEntryTimestamp { timestamp_us: v })
 	}
