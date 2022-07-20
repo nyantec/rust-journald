@@ -70,6 +70,8 @@ pub enum JournalSeek {
 	Head,
 	Tail,
 	Cursor(String),
+	/// Seek to beginning of the current boot process
+	ThisBoot,
 }
 
 /// Wakeup event types
@@ -186,9 +188,8 @@ impl JournalReader {
 			unsafe {
 				let b = ::std::slice::from_raw_parts(data, sz as usize);
 				let field = String::from_utf8_lossy(b);
-				let mut name_value = field.splitn(2, '=');
-				let name = name_value.next().unwrap();
-				let value = name_value.next().unwrap();
+
+				let (name, value) = field.split_once('=').unwrap();
 				fields.insert(From::from(name), From::from(value));
 			}
 		}
@@ -270,6 +271,11 @@ impl JournalReader {
 					::std::ffi::CString::new(cur)?.as_ptr(),
 				))?
 			},
+			JournalSeek::ThisBoot => {
+				let boot_id = crate::Id::get_boot_id()?;
+
+				unsafe { ffi_result(ffi::sd_journal_seek_monotonic_usec(self.j, boot_id.0, 0)) }?
+			}
 		};
 
 		Ok(())
