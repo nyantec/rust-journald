@@ -188,9 +188,8 @@ impl JournalReader {
 			unsafe {
 				let b = ::std::slice::from_raw_parts(data, sz as usize);
 				let field = String::from_utf8_lossy(b);
-				let mut name_value = field.splitn(2, '=');
-				let name = name_value.next().unwrap();
-				let value = name_value.next().unwrap();
+
+				let (name, value) = field.split_once('=').unwrap();
 				fields.insert(From::from(name), From::from(value));
 			}
 		}
