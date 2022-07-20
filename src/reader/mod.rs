@@ -70,6 +70,8 @@ pub enum JournalSeek {
 	Head,
 	Tail,
 	Cursor(String),
+	/// Seek to beginning of the current boot process
+	ThisBoot,
 }
 
 /// Wakeup event types
@@ -270,6 +272,11 @@ impl JournalReader {
 					::std::ffi::CString::new(cur)?.as_ptr(),
 				))?
 			},
+			JournalSeek::ThisBoot => {
+				let boot_id = crate::Id::get_boot_id()?;
+
+				unsafe { ffi_result(ffi::sd_journal_seek_monotonic_usec(self.j, boot_id.0, 0)) }?
+			}
 		};
 
 		Ok(())

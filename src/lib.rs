@@ -1,4 +1,5 @@
 pub use std::io::{Error, Result};
+use std::mem::MaybeUninit;
 
 use libsystemd_sys as ffi;
 
@@ -34,3 +35,14 @@ pub mod reader;
 
 #[path = "journal_writer.rs"]
 pub mod writer;
+
+pub struct Id(pub(crate) libsystemd_sys::id128::sd_id128_t);
+
+impl Id {
+	pub fn get_boot_id() -> Result<Self> {
+		let mut id = MaybeUninit::uninit();
+
+		unsafe { ffi_result(ffi::id128::sd_id128_get_boot(id.as_mut_ptr())) }?;
+		Ok(Self(unsafe { id.assume_init() }))
+	}
+}
